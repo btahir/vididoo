@@ -9,13 +9,21 @@ import { createBlobInput, createMp4Output } from '@/lib/mediabunny-loader'
 import { SourceFilePicker } from '@/components/media/source-file-picker'
 import { cn } from '@/lib/utils'
 
+import type * as MediabunnyModule from 'mediabunny'
+import { canEncodeAudio } from 'mediabunny'
+import { registerMp3Encoder } from '@mediabunny/mp3-encoder'
+
 type Mediabunny = typeof import('mediabunny')
 type EncodedVideoPacketSourceCtor = Mediabunny['EncodedVideoPacketSource']
 type EncodedVideoPacketSource = InstanceType<EncodedVideoPacketSourceCtor>
 type AudioBufferSourceCtor = Mediabunny['AudioBufferSource']
 type AudioBufferSource = InstanceType<AudioBufferSourceCtor>
+type AudioCodec = MediabunnyModule.AudioCodec
 
 type Status = 'idle' | 'ready' | 'converting' | 'success' | 'error'
+
+const BITRATE_REQUIRED_CODECS = new Set<AudioCodec>(['aac', 'opus', 'mp3', 'vorbis'])
+let mp3EncoderRegistered = false
 
 export function ReplaceAudioTool() {
   const [videoFile, setVideoFile] = React.useState<File | null>(null)
@@ -161,7 +169,12 @@ export function ReplaceAudioTool() {
       videoSource = new runtime.EncodedVideoPacketSource(videoCodec)
       output.addVideoTrack(videoSource)
 
-      audioSource = new runtime.AudioBufferSource({ codec: 'aac', bitrate: 192_000 })
+      const selectedAudioCodec = await selectAudioCodec(format.getSupportedAudioCodecs())
+      const audioConfig =
+        needsBitrate(selectedAudioCodec) ?
+          { codec: selectedAudioCodec, bitrate: 192_000 } :
+          { codec: selectedAudioCodec }
+      audioSource = new runtime.AudioBufferSource(audioConfig)
       output.addAudioTrack(audioSource)
 
       setStatus('converting')
@@ -223,7 +236,7 @@ export function ReplaceAudioTool() {
         output.cancel().catch(() => undefined)
       }
     }
-  }, [readyToReplace, audioBuffer, mediabunny, reload, videoFile])
+  }, [readyToReplace, audioBuffer, mediabunny, reload, videoFile, videoDuration])
 
   return (
     <div className="flex flex-col gap-6">
@@ -241,7 +254,7 @@ export function ReplaceAudioTool() {
             ref={videoRef}
             src={videoUrl}
             controls
-            className="w-full rounded-xl border border-slate-700/60 bg-black"
+            className="h-auto max-h-[320px] w-full rounded-xl border border-slate-700/60 bg-black object-contain"
             onLoadedMetadata={handleVideoMetadata}
           />
           {videoDuration !== null && (
@@ -298,6 +311,64 @@ export function ReplaceAudioTool() {
       </div>
     </div>
   )
+}
+
+async function selectAudioCodec(supported: AudioCodec[]) {
+  const preferredOrder: AudioCodec[] = ['aac', 'mp3']
+
+  for (const codec of preferredOrder) {
+    if (!supported.includes(codec)) continue
+    if (codec === 'aac') {
+      if (await safeCanEncodeAudio(codec)) {
+        return codec
+      }
+    } else if (codec === 'mp3') {
+      if (await ensureMp3Support()) {
+        return codec
+      }
+    }
+  }
+
+  for (const codec of supported) {
+    if (codec === 'mp3') {
+      if (await ensureMp3Support()) {
+        return codec
+      }
+    } else if (await safeCanEncodeAudio(codec)) {
+      return codec
+    }
+  }
+
+  throw new Error('No compatible audio codec is available for this browser.')
+}
+
+async function ensureMp3Support() {
+  if (await safeCanEncodeAudio('mp3')) {
+    return true
+  }
+
+  if (!mp3EncoderRegistered) {
+    try {
+      registerMp3Encoder()
+      mp3EncoderRegistered = true
+    } catch {
+      return false
+    }
+  }
+
+  return safeCanEncodeAudio('mp3')
+}
+
+async function safeCanEncodeAudio(codec: AudioCodec) {
+  try {
+    return await canEncodeAudio(codec)
+  } catch {
+    return false
+  }
+}
+
+function needsBitrate(codec: AudioCodec) {
+  return BITRATE_REQUIRED_CODECS.has(codec)
 }
 
 async function decodeAudioBuffer(file: File) {
