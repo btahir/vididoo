@@ -50,11 +50,11 @@ export function SourceFilePicker({
         onClick={() => inputRef.current?.click()}
         disabled={disabled}
         className={cn(
-          'flex flex-1 items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-900/60 px-4 py-3 text-left text-sm text-slate-200 transition hover:border-orange-400/40 hover:bg-slate-900/80',
+          'flex flex-1 items-center justify-between gap-3 overflow-hidden rounded-lg border border-white/10 bg-slate-900/60 px-4 py-3 text-left text-sm text-slate-200 transition hover:border-orange-400/40 hover:bg-slate-900/80',
           disabled && 'cursor-not-allowed opacity-70',
         )}
       >
-        <span className="truncate">
+        <span className="min-w-0 truncate">
           {file ? `${file.name} • ${formatFileSize(file.size)}` : placeholder}
         </span>
         <span className="shrink-0 rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold text-slate-700">

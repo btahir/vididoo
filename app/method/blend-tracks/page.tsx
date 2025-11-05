@@ -1,34 +1,10 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getMethodBySlug, METHODS } from "@/lib/constants";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BlendTracksTool } from "@/components/features/blend-tracks/blend-tracks-tool";
+import { AudioLines } from "lucide-react";
 
-interface MethodPageProps {
-  params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  return METHODS.filter(
-    (method) =>
-      method.slug !== "extract-audio" &&
-      method.slug !== "cut-video" &&
-      method.slug !== "blend-tracks",
-  ).map((method) => ({
-    slug: method.slug,
-  }));
-}
-
-export default async function MethodPage({ params }: MethodPageProps) {
-  const { slug } = await params;
-  const method = getMethodBySlug(slug);
-
-  if (!method) {
-    notFound();
-  }
-
-  const Icon = method.icon;
-
+export default function BlendTracksPage() {
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-800 via-slate-900 to-emerald-950">
       <main className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -44,24 +20,21 @@ export default async function MethodPage({ params }: MethodPageProps) {
           </Link>
         </div>
 
-        {/* Method Content */}
         <div className="max-w-4xl mx-auto">
           <Card className="border-slate-700/50 bg-slate-800/40 shadow-lg shadow-slate-900/20 backdrop-blur-sm">
             <CardHeader className="text-center">
               <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center text-slate-300">
-                <Icon className="h-11 w-11" strokeWidth={1.4} />
+                <AudioLines className="h-11 w-11" strokeWidth={1.4} />
               </div>
               <CardTitle className="text-4xl font-bold text-slate-200">
-                {method.name}
+                Blend Tracks
               </CardTitle>
               <CardDescription className="text-lg text-slate-400 mt-2">
-                Edit your media files with {method.name.toLowerCase()}
+                Mix two audio files, fine-tune their levels, and download the blended track as an MP3.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="p-8 text-center text-slate-400">
-                <p>This feature is coming soon. Upload and edit functionality will be available here.</p>
-              </div>
+              <BlendTracksTool />
             </CardContent>
           </Card>
         </div>
