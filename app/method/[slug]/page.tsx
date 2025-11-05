@@ -22,6 +22,8 @@ export default async function MethodPage({ params }: MethodPageProps) {
     notFound();
   }
 
+  const Icon = method.icon;
+
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-800 via-slate-900 to-emerald-950">
       <main className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -39,9 +41,11 @@ export default async function MethodPage({ params }: MethodPageProps) {
 
         {/* Method Content */}
         <div className="max-w-4xl mx-auto">
-          <Card className="border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
+          <Card className="border-slate-700/50 bg-slate-800/40 shadow-lg shadow-slate-900/20 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <div className="text-6xl mb-4">{method.icon}</div>
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center text-slate-300">
+                <Icon className="h-11 w-11" strokeWidth={1.4} />
+              </div>
               <CardTitle className="text-4xl font-bold text-slate-200">
                 {method.name}
               </CardTitle>
@@ -60,4 +64,3 @@ export default async function MethodPage({ params }: MethodPageProps) {
     </div>
   );
 }
-

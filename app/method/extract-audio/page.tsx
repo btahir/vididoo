@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExtractAudioTool } from "@/components/features/extract-audio/extract-audio-tool";
+import { AudioWaveform } from "lucide-react";
 
 export default function ExtractAudioPage() {
   return (
@@ -20,9 +21,11 @@ export default function ExtractAudioPage() {
         </div>
 
         <div className="max-w-4xl mx-auto">
-          <Card className="border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
+          <Card className="border-slate-700/50 bg-slate-800/40 shadow-lg shadow-slate-900/20 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <div className="text-6xl mb-4">🎤</div>
+              <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center text-slate-300">
+                <AudioWaveform className="h-11 w-11" strokeWidth={1.4} />
+              </div>
               <CardTitle className="text-4xl font-bold text-slate-200">
                 Extract Audio
               </CardTitle>
@@ -39,4 +42,3 @@ export default function ExtractAudioPage() {
     </div>
   );
 }
-

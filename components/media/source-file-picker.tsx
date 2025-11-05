@@ -50,7 +50,7 @@ export function SourceFilePicker({
         onClick={() => inputRef.current?.click()}
         disabled={disabled}
         className={cn(
-          'flex flex-1 items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-900/60 px-4 py-2 text-left text-sm text-slate-200 transition hover:border-orange-400/40 hover:bg-slate-900/80',
+          'flex flex-1 items-center justify-between gap-3 rounded-lg border border-white/10 bg-slate-900/60 px-4 py-3 text-left text-sm text-slate-200 transition hover:border-orange-400/40 hover:bg-slate-900/80',
           disabled && 'cursor-not-allowed opacity-70',
         )}
       >

@@ -19,19 +19,25 @@ export default function Home() {
         {/* Methods Grid */}
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {METHODS.map((method) => (
-              <Link key={method.slug} href={`/method/${method.slug}`}>
-                <Card className="group relative h-full cursor-pointer border-slate-700/50 bg-slate-800/50 backdrop-blur-sm py-0 transition-all duration-200 hover:border-orange-500/50 hover:shadow-lg hover:shadow-orange-500/20 hover:-translate-y-1">
-                  <CardContent className="flex flex-col items-center justify-center p-6 text-center space-y-3">
-                    <span className="text-4xl">{method.icon}</span>
-                    <h3 className="text-lg font-semibold text-slate-200 transition-colors group-hover:text-orange-400">
-                      {method.name}
-                    </h3>
-                  </CardContent>
-                  <div className="absolute inset-0 rounded-xl bg-linear-to-br from-orange-500/0 to-orange-600/0 transition-all duration-200 pointer-events-none group-hover:from-orange-500/10 group-hover:to-orange-600/10" />
-                </Card>
-              </Link>
-            ))}
+            {METHODS.map((method) => {
+              const Icon = method.icon;
+
+              return (
+                <Link key={method.slug} href={`/method/${method.slug}`}>
+                  <Card className="group relative h-full cursor-pointer border-slate-700/50 bg-slate-800/50 backdrop-blur-sm py-0 transition-all duration-200 hover:border-slate-500/50 hover:shadow-lg hover:shadow-slate-900/20 hover:-translate-y-1">
+                    <CardContent className="flex flex-col items-center justify-center p-6 text-center space-y-4">
+                      <div className="flex h-14 w-14 items-center justify-center text-slate-300 transition-colors duration-200 group-hover:text-slate-100">
+                        <Icon className="h-6 w-6" strokeWidth={1.4} />
+                      </div>
+                      <h3 className="text-lg font-semibold text-slate-200 transition-colors group-hover:text-slate-50">
+                        {method.name}
+                      </h3>
+                    </CardContent>
+                    <div className="absolute inset-0 rounded-xl border border-transparent transition-colors duration-200 pointer-events-none group-hover:border-slate-500/40" />
+                  </Card>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </main>
