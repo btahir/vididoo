@@ -76,3 +76,11 @@ export function createAudioOutput(
 
   return { output, target, format }
 }
+
+export function createMp4Output(module: MediabunnyImport) {
+  const format = new module.Mp4OutputFormat()
+  const target = new module.BufferTarget()
+  const output = new module.Output({ format, target })
+
+  return { output, target, format }
+}
