@@ -5,11 +5,13 @@ import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useMediabunny } from '@/hooks/use-mediabunny'
-import { createAudioOutput, createBlobInput } from '@/lib/mediabunny-loader'
+import { createAudioOutput, createBlobInput, type AudioContainer } from '@/lib/mediabunny-loader'
 import { SourceFilePicker } from '@/components/media/source-file-picker'
 import { cn } from '@/lib/utils'
 
 import type * as MediabunnyModule from 'mediabunny'
+import { canEncodeAudio } from 'mediabunny'
+import { registerMp3Encoder } from '@mediabunny/mp3-encoder'
 
 type AudioCodec = MediabunnyModule.AudioCodec
 type ConversionConstructor = typeof MediabunnyModule.Conversion
@@ -27,6 +29,8 @@ const DISCARD_REASON_MESSAGES: Record<DiscardedTrack['reason'], string> = {
   undecodable_source_codec: 'The source audio cannot be decoded in this browser.',
   no_encodable_target_codec: 'This browser cannot encode the selected audio format.',
 }
+
+let mp3EncoderRegistered = false
 
 type ExtractionStatus = 'idle' | 'ready' | 'converting' | 'success' | 'error'
 
@@ -97,24 +101,31 @@ export function ExtractAudioTool() {
         return
       }
 
+      const useMp3 = await ensureMp3Support()
+      const container: AudioContainer = useMp3 ? 'mp3' : 'wav'
+
       let selectedCodec: AudioCodec | null = null
-      try {
-        selectedCodec = await runtime.getFirstEncodableAudioCodec(WAV_CODEC_CANDIDATES)
-      } catch {
-        // Ignore detection errors and fall back to PCM.
+      if (useMp3) {
+        selectedCodec = 'mp3'
+      } else {
+        try {
+          selectedCodec = await runtime.getFirstEncodableAudioCodec(WAV_CODEC_CANDIDATES)
+        } catch {
+          // Ignore detection errors and fall back to PCM.
+        }
+
+        if (!selectedCodec) {
+          selectedCodec = FALLBACK_WAV_CODEC
+        }
       }
 
-      if (!selectedCodec) {
-        selectedCodec = FALLBACK_WAV_CODEC
-      }
-
-      const { output, target, format } = createAudioOutput(runtime, 'wav')
+      const { output, target, format } = createAudioOutput(runtime, container)
       const conversion = await runtime.Conversion.init({
         input,
         output,
         video: { discard: true },
         audio: {
-          codec: selectedCodec,
+          codec: selectedCodec as AudioCodec,
           ...(needsBitrate(selectedCodec) ? { bitrate: 192_000 } : {}),
           forceTranscode: true,
         },
@@ -209,7 +220,7 @@ export function ExtractAudioTool() {
             disabled={disabled}
             className="rounded-full bg-linear-to-r from-orange-500 to-orange-600 px-6 text-white shadow-lg shadow-orange-500/30 transition hover:from-orange-400 hover:to-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {status === 'converting' ? 'Extracting…' : 'Extract audio (WAV)'}
+            {status === 'converting' ? 'Extracting…' : 'Extract audio'}
           </Button>
           {statusMessage && (
             <span className={cn('text-sm', statusMessage.tone)}>
@@ -231,7 +242,33 @@ export function ExtractAudioTool() {
   )
 }
 
-function needsBitrate(codec: AudioCodec) {
+async function ensureMp3Support() {
+  try {
+    if (await canEncodeAudio('mp3')) {
+      return true
+    }
+  } catch {
+    // Ignore detection errors and attempt registration.
+  }
+
+  if (!mp3EncoderRegistered) {
+    try {
+      registerMp3Encoder()
+      mp3EncoderRegistered = true
+    } catch {
+      return false
+    }
+  }
+
+  try {
+    return await canEncodeAudio('mp3')
+  } catch {
+    return false
+  }
+}
+
+function needsBitrate(codec: AudioCodec | null) {
+  if (!codec) return false
   return BITRATE_REQUIRED_CODECS.has(codec)
 }
 
