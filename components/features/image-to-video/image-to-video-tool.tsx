@@ -284,7 +284,7 @@ export function ImageToVideoTool() {
 
       <div className="flex flex-col gap-3">
         {(status === 'converting' || progress > 0) && (
-          <Progress value={progress} className="h-1.5 bg-slate-800" />
+          <Progress value={progress} className="h-1.5 bg-slate-600" />
         )}
         <div className="flex flex-wrap items-center gap-3">
           <Button
