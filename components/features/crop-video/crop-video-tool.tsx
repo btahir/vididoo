@@ -426,10 +426,14 @@ export function CropVideoTool() {
 
       {videoUrl && (
         <div className="space-y-3">
-          <div className="mx-auto w-full max-w-3xl">
+          <div className="mx-auto w-full max-w-[720px]">
             <div
               ref={containerRef}
               className="relative overflow-hidden rounded-xl border border-slate-700/60 bg-black"
+              style={{
+                aspectRatio: videoDimensions ? `${videoDimensions.width}/${videoDimensions.height}` : '16/9',
+                maxHeight: '320px',
+              }}
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
@@ -440,7 +444,7 @@ export function CropVideoTool() {
                 controls
                 playsInline
                 muted
-                className="block w-full"
+                className="h-full w-full object-contain"
                 onLoadedMetadata={handleMetadataLoaded}
               />
 

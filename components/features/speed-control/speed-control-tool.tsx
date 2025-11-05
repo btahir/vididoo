@@ -254,7 +254,8 @@ export function SpeedControlTool() {
             ref={videoRef}
             src={videoUrl}
             controls
-            className="w-full rounded-xl border border-slate-700/60 bg-black"
+            playsInline
+            className="h-auto max-h-[320px] w-full rounded-xl border border-slate-700/60 bg-black object-contain"
             onLoadedMetadata={handleMetadataLoaded}
           />
           {duration !== null && (

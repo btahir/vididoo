@@ -199,7 +199,8 @@ export function GrayVideoTool() {
           <video
             src={videoUrl}
             controls
-            className="w-full rounded-xl border border-slate-700/60 bg-black"
+            playsInline
+            className="h-auto max-h-[320px] w-full rounded-xl border border-slate-700/60 bg-black object-contain"
           />
           <p className="text-xs text-slate-200">
             Preview of your video before grayscale conversion
