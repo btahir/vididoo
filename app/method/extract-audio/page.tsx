@@ -1,27 +1,9 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getMethodBySlug, METHODS } from "@/lib/constants";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExtractAudioTool } from "@/components/features/extract-audio/extract-audio-tool";
 
-interface MethodPageProps {
-  params: Promise<{ slug: string }>;
-}
-
-export async function generateStaticParams() {
-  return METHODS.filter((method) => method.slug !== "extract-audio").map((method) => ({
-    slug: method.slug,
-  }));
-}
-
-export default async function MethodPage({ params }: MethodPageProps) {
-  const { slug } = await params;
-  const method = getMethodBySlug(slug);
-
-  if (!method) {
-    notFound();
-  }
-
+export default function ExtractAudioPage() {
   return (
     <div className="min-h-screen bg-linear-to-br from-slate-800 via-slate-900 to-emerald-950">
       <main className="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -37,22 +19,19 @@ export default async function MethodPage({ params }: MethodPageProps) {
           </Link>
         </div>
 
-        {/* Method Content */}
         <div className="max-w-4xl mx-auto">
           <Card className="border-slate-700/50 bg-slate-800/50 backdrop-blur-sm">
             <CardHeader className="text-center">
-              <div className="text-6xl mb-4">{method.icon}</div>
+              <div className="text-6xl mb-4">🎤</div>
               <CardTitle className="text-4xl font-bold text-slate-200">
-                {method.name}
+                Extract Audio
               </CardTitle>
               <CardDescription className="text-lg text-slate-400 mt-2">
-                Edit your media files with {method.name.toLowerCase()}
+                Pull the audio track out of any video, right in your browser.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="p-8 text-center text-slate-400">
-                <p>This feature is coming soon. Upload and edit functionality will be available here.</p>
-              </div>
+              <ExtractAudioTool />
             </CardContent>
           </Card>
         </div>
