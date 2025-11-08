@@ -12,8 +12,20 @@ export default function Home() {
             Vididoo
           </h1>
           <p className="text-xl sm:text-2xl text-slate-300 font-medium">
-            The simplest way to edit your media files.
+            The simplest way to edit your
+            <br className="sm:hidden" /> media files.
           </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs sm:text-sm font-semibold text-slate-100">
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
+              100% private
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
+              Lightning fast
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
+              Free to use
+            </div>
+          </div>
         </header>
 
         {/* Methods Grid */}
