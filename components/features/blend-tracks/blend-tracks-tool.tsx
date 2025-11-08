@@ -12,6 +12,8 @@ import { createAudioOutput, type AudioContainer } from '@/lib/mediabunny-loader'
 import { cn } from '@/lib/utils'
 
 import type * as MediabunnyModule from 'mediabunny'
+import { canEncodeAudio } from 'mediabunny'
+import { registerMp3Encoder } from '@mediabunny/mp3-encoder'
 
 type Mediabunny = typeof import('mediabunny')
 type AudioCodec = MediabunnyModule.AudioCodec
@@ -25,7 +27,7 @@ type BlendCandidate = {
   duration: number | null
 }
 
-const DEFAULT_BLEND_RATIO = 0.3
+const DEFAULT_VOLUME = 0.7
 
 export function BlendTracksTool() {
   const [primary, setPrimary] = React.useState<BlendCandidate>({
@@ -41,7 +43,8 @@ export function BlendTracksTool() {
     duration: null,
   })
 
-  const [blendRatio, setBlendRatio] = React.useState<number>(DEFAULT_BLEND_RATIO)
+  const [primaryVolume, setPrimaryVolume] = React.useState<number>(DEFAULT_VOLUME)
+  const [secondaryVolume, setSecondaryVolume] = React.useState<number>(DEFAULT_VOLUME)
 
   const [status, setStatus] = React.useState<Status>('idle')
   const [progress, setProgress] = React.useState<number>(0)
@@ -83,8 +86,8 @@ export function BlendTracksTool() {
   }, [primary.buffer, secondary.buffer])
 
   const readyToBlend = Boolean(primary.buffer && secondary.buffer)
-  const primaryGain = 1 - blendRatio
-  const secondaryGain = blendRatio
+  const primaryGain = primaryVolume
+  const secondaryGain = secondaryVolume
 
   const ensureAudioContext = React.useCallback(() => {
     if (!audioContextRef.current) {
@@ -204,9 +207,14 @@ export function BlendTracksTool() {
     [secondary.previewUrl, ensureAudioContext, resetStatus],
   )
 
-  const handleBlendRatioChange = React.useCallback((value: number[]) => {
-    const next = clamp(value[0] ?? DEFAULT_BLEND_RATIO, 0, 1)
-    setBlendRatio(next)
+  const handlePrimaryVolumeChange = React.useCallback((value: number[]) => {
+    const next = clamp(value[0] ?? DEFAULT_VOLUME * 100, 0, 100) / 100
+    setPrimaryVolume(next)
+  }, [])
+
+  const handleSecondaryVolumeChange = React.useCallback((value: number[]) => {
+    const next = clamp(value[0] ?? DEFAULT_VOLUME * 100, 0, 100) / 100
+    setSecondaryVolume(next)
   }, [])
 
   const blendTracks = React.useCallback(async () => {
@@ -320,47 +328,39 @@ export function BlendTracksTool() {
         <TrackPanel
           title="Primary track"
           candidate={primary}
-          gain={primaryGain}
+          volume={primaryGain}
           status={status}
           onFileSelected={handlePrimarySelected}
         />
         <TrackPanel
           title="Secondary track"
           candidate={secondary}
-          gain={secondaryGain}
+          volume={secondaryGain}
           status={status}
           onFileSelected={handleSecondarySelected}
         />
       </div>
 
       <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
-        <div className="flex items-center justify-between pb-3">
-          <div>
-            <p className="text-sm font-medium text-slate-200">Blend balance</p>
-            <p className="text-xs text-slate-400">
-              0 plays only the primary track, 1 plays only the secondary track.
-            </p>
-          </div>
-          <div className="text-xs text-slate-400">
-            <span className="font-semibold text-slate-200">{blendRatio.toFixed(2)}</span>
-            <span className="ml-1 text-slate-500">ratio</span>
-          </div>
+        <div className="pb-3">
+          <p className="text-sm font-medium text-slate-200">Volume mix</p>
+          <p className="text-xs text-slate-400">
+            Set each track anywhere between 0% and 100%. Levels do not need to add up to 100%.
+          </p>
         </div>
-        <Slider
-          min={0}
-          max={1}
-          step={0.01}
-          value={[blendRatio]}
-          disabled={status === 'converting'}
-          onValueChange={handleBlendRatioChange}
-        />
-        <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-          <span>
-            Primary • {(primaryGain * 100).toFixed(0)}%
-          </span>
-          <span>
-            Secondary • {(secondaryGain * 100).toFixed(0)}%
-          </span>
+        <div className="space-y-4">
+          <VolumeSlider
+            label="Primary track"
+            value={primaryVolume}
+            disabled={status === 'converting'}
+            onChange={handlePrimaryVolumeChange}
+          />
+          <VolumeSlider
+            label="Secondary track"
+            value={secondaryVolume}
+            disabled={status === 'converting'}
+            onChange={handleSecondaryVolumeChange}
+          />
         </div>
       </div>
 
@@ -399,12 +399,12 @@ export function BlendTracksTool() {
 type TrackPanelProps = {
   title: string
   candidate: BlendCandidate
-  gain: number
+  volume: number
   status: Status
   onFileSelected: (file: File | null) => void
 }
 
-function TrackPanel({ title, candidate, gain, status, onFileSelected }: TrackPanelProps) {
+function TrackPanel({ title, candidate, volume, status, onFileSelected }: TrackPanelProps) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
       <div className="space-y-2">
@@ -427,8 +427,35 @@ function TrackPanel({ title, candidate, gain, status, onFileSelected }: TrackPan
       )}
 
       <p className="text-xs text-slate-400">
-        Current contribution: {(gain * 100).toFixed(0)}%
+        Volume: {(volume * 100).toFixed(0)}%
       </p>
+    </div>
+  )
+}
+
+type VolumeSliderProps = {
+  label: string
+  value: number
+  disabled: boolean
+  onChange: (value: number[]) => void
+}
+
+function VolumeSlider({ label, value, disabled, onChange }: VolumeSliderProps) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-xs text-slate-400">
+        <span className="font-medium text-slate-200">{label}</span>
+        <span>{Math.round(value * 100)}%</span>
+      </div>
+      <Slider
+        min={0}
+        max={100}
+        step={1}
+        value={[Math.round(value * 100)]}
+        disabled={disabled}
+        onValueChange={onChange}
+        className="mt-2 [&_[data-slot=slider-range]]:bg-slate-100 [&_[data-slot=slider-track]]:bg-slate-700"
+      />
     </div>
   )
 }
@@ -444,6 +471,8 @@ const ENCODING_CANDIDATES: EncodingCandidate[] = [
   { container: 'wav', codec: 'pcm-s16' },
 ]
 
+let mp3EncoderRegistered = false
+
 async function decodeAudioFile(file: File, context: AudioContext) {
   const arrayBuffer = await file.arrayBuffer()
   const buffer = await context.decodeAudioData(arrayBuffer.slice(0))
@@ -457,6 +486,12 @@ async function selectEncodingConfig(
 ): Promise<EncodingCandidate> {
   for (const candidate of ENCODING_CANDIDATES) {
     try {
+      if (candidate.codec === 'mp3') {
+        const mp3Ready = await ensureMp3Support()
+        if (!mp3Ready) {
+          continue
+        }
+      }
       const canEncode = await runtime.canEncodeAudio(candidate.codec, {
         numberOfChannels,
         sampleRate,
@@ -552,4 +587,29 @@ function triggerBrowserDownload(url: string, filename: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
+}
+
+async function ensureMp3Support() {
+  if (await safeCanEncodeAudio('mp3')) {
+    return true
+  }
+
+  if (!mp3EncoderRegistered) {
+    try {
+      registerMp3Encoder()
+      mp3EncoderRegistered = true
+    } catch {
+      return false
+    }
+  }
+
+  return safeCanEncodeAudio('mp3')
+}
+
+async function safeCanEncodeAudio(codec: AudioCodec) {
+  try {
+    return await canEncodeAudio(codec)
+  } catch {
+    return false
+  }
 }
