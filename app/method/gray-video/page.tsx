@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GrayVideoTool } from "@/components/features/gray-video/gray-video-tool";
+import { GrayVideoTool } from "./gray-video-tool";
 import { Palette } from "lucide-react";
 
 export default function GrayVideoPage() {

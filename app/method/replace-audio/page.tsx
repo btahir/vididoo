@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ReplaceAudioTool } from "@/components/features/replace-audio/replace-audio-tool";
+import { ReplaceAudioTool } from "./replace-audio-tool";
 import { Replace } from "lucide-react";
 
 export default function ReplaceAudioPage() {

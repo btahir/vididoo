@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SpeedControlTool } from "@/components/features/speed-control/speed-control-tool";
+import { SpeedControlTool } from "./speed-control-tool";
 import { Gauge } from "lucide-react";
 
 export default function SpeedControlPage() {

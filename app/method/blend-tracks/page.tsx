@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { BlendTracksTool } from "@/components/features/blend-tracks/blend-tracks-tool";
+import { BlendTracksTool } from "./blend-tracks-tool";
 import { AudioLines } from "lucide-react";
 
 export default function BlendTracksPage() {

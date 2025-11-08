@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ResizeVideoTool } from "@/components/features/resize-video/resize-video-tool";
+import { ResizeVideoTool } from "./resize-video-tool";
 import { Expand } from "lucide-react";
 
 export default function ResizeVideoPage() {

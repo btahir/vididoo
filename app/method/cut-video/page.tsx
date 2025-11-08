@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CutVideoTool } from "@/components/features/cut-video/cut-video-tool";
+import { CutVideoTool } from "./cut-video-tool";
 import { Scissors } from "lucide-react";
 
 export default function CutVideoPage() {

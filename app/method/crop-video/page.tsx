@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CropVideoTool } from "@/components/features/crop-video/crop-video-tool";
+import { CropVideoTool } from "./crop-video-tool";
 import { Crop } from "lucide-react";
 
 export default function CropVideoPage() {

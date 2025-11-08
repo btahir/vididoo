@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ExtractAudioTool } from "@/components/features/extract-audio/extract-audio-tool";
+import { ExtractAudioTool } from "./extract-audio-tool";
 import { AudioWaveform } from "lucide-react";
 
 export default function ExtractAudioPage() {

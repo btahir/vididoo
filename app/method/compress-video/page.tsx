@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CompressVideoTool } from "@/components/features/compress-video/compress-video-tool";
+import { CompressVideoTool } from "./compress-video-tool";
 import { FileDown } from "lucide-react";
 
 export default function CompressVideoPage() {

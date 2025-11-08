@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MergeVideosTool } from "@/components/features/merge-videos/merge-videos-tool";
+import { MergeVideosTool } from "./merge-videos-tool";
 import { Merge } from "lucide-react";
 
 export default function MergeVideosPage() {

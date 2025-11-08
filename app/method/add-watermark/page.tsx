@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AddWatermarkTool } from "@/components/features/add-watermark/add-watermark-tool";
+import { AddWatermarkTool } from "./add-watermark-tool";
 import { BadgeCheck } from "lucide-react";
 
 export default function AddWatermarkPage() {

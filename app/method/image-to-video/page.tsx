@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ImageToVideoTool } from "@/components/features/image-to-video/image-to-video-tool";
+import { ImageToVideoTool } from "./image-to-video-tool";
 import { FileVideo } from "lucide-react";
 
 export default function ImageToVideoPage() {
