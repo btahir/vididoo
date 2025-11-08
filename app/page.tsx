@@ -40,6 +40,21 @@ export default function Home() {
             })}
           </div>
         </div>
+        <footer className="mt-16 text-center text-sm text-slate-400">
+          Made with{" "}
+          <span role="img" aria-label="love" className="text-red-400">
+            ♥
+          </span>{" "}
+          by{" "}
+          <a
+            href="https://x.com/deepwhitman"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-slate-200 hover:text-white"
+          >
+            Bilal Tahir
+          </a>
+        </footer>
       </main>
     </div>
   );
