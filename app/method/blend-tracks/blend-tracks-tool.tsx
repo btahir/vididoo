@@ -19,12 +19,36 @@ type Mediabunny = typeof import('mediabunny')
 type AudioCodec = MediabunnyModule.AudioCodec
 
 type Status = 'idle' | 'ready' | 'converting' | 'success' | 'error'
+type MixLengthStrategy = 'shortest' | 'longest'
 
 type BlendCandidate = {
   file: File | null
   previewUrl: string | null
   buffer: AudioBuffer | null
   duration: number | null
+}
+
+type TrackPanelProps = {
+  title: string
+  candidate: BlendCandidate
+  volume: number
+  status: Status
+  onFileSelected: (file: File | null) => void
+}
+
+type VolumeSliderProps = {
+  label: string
+  value: number
+  disabled: boolean
+  onChange: (value: number[]) => void
+}
+
+type LengthOptionProps = {
+  label: string
+  description: string
+  selected: boolean
+  disabled: boolean
+  onSelect: () => void
 }
 
 const DEFAULT_PRIMARY_VOLUME = 1
@@ -46,6 +70,7 @@ export function BlendTracksTool() {
 
   const [primaryVolume, setPrimaryVolume] = React.useState<number>(DEFAULT_PRIMARY_VOLUME)
   const [secondaryVolume, setSecondaryVolume] = React.useState<number>(DEFAULT_SECONDARY_VOLUME)
+  const [mixLengthStrategy, setMixLengthStrategy] = React.useState<MixLengthStrategy>('shortest')
 
   const [status, setStatus] = React.useState<Status>('idle')
   const [progress, setProgress] = React.useState<number>(0)
@@ -242,7 +267,13 @@ export function BlendTracksTool() {
     let audioSource: InstanceType<Mediabunny['AudioBufferSource']> | null = null
 
     try {
-      const mixedBuffer = mixAudioBuffers(primary.buffer, secondary.buffer, primaryGain, secondaryGain)
+      const mixedBuffer = mixAudioBuffers(
+        primary.buffer,
+        secondary.buffer,
+        primaryGain,
+        secondaryGain,
+        mixLengthStrategy,
+      )
       setProgress(30)
 
       const encoding = await selectEncodingConfig(runtime, mixedBuffer.numberOfChannels, mixedBuffer.sampleRate)
@@ -299,7 +330,17 @@ export function BlendTracksTool() {
       setStatus('error')
       setProgress(0)
     }
-  }, [primary.buffer, secondary.buffer, primaryGain, secondaryGain, mediabunny, reload, primary.file, secondary.file])
+  }, [
+    primary.buffer,
+    secondary.buffer,
+    primaryGain,
+    secondaryGain,
+    mediabunny,
+    reload,
+    primary.file,
+    secondary.file,
+    mixLengthStrategy,
+  ])
 
   const disabled = status === 'converting' || loading || !readyToBlend
 
@@ -365,6 +406,33 @@ export function BlendTracksTool() {
         </div>
       </div>
 
+      <div className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
+        <div className="flex items-center justify-between pb-3">
+          <div>
+            <p className="text-sm font-medium text-slate-200">Blend length</p>
+            <p className="text-xs text-slate-400">
+              Choose whether to keep the overlap only or extend to the longer track.
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <LengthOption
+            label="Shortest"
+            description="Stops when the shorter clip ends."
+            selected={mixLengthStrategy === 'shortest'}
+            disabled={status === 'converting'}
+            onSelect={() => setMixLengthStrategy('shortest')}
+          />
+          <LengthOption
+            label="Longest"
+            description="Keeps playing until the longer clip finishes."
+            selected={mixLengthStrategy === 'longest'}
+            disabled={status === 'converting'}
+            onSelect={() => setMixLengthStrategy('longest')}
+          />
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3">
         {(status === 'converting' || progress > 0) && (
           <Progress value={progress} className="h-1.5 bg-slate-600" />
@@ -397,14 +465,6 @@ export function BlendTracksTool() {
   )
 }
 
-type TrackPanelProps = {
-  title: string
-  candidate: BlendCandidate
-  volume: number
-  status: Status
-  onFileSelected: (file: File | null) => void
-}
-
 function TrackPanel({ title, candidate, volume, status, onFileSelected }: TrackPanelProps) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-5">
@@ -434,13 +494,6 @@ function TrackPanel({ title, candidate, volume, status, onFileSelected }: TrackP
   )
 }
 
-type VolumeSliderProps = {
-  label: string
-  value: number
-  disabled: boolean
-  onChange: (value: number[]) => void
-}
-
 function VolumeSlider({ label, value, disabled, onChange }: VolumeSliderProps) {
   return (
     <div>
@@ -458,6 +511,25 @@ function VolumeSlider({ label, value, disabled, onChange }: VolumeSliderProps) {
         className="mt-2 [&_[data-slot=slider-range]]:bg-slate-100 [&_[data-slot=slider-track]]:bg-slate-700"
       />
     </div>
+  )
+}
+
+function LengthOption({ label, description, selected, disabled, onSelect }: LengthOptionProps) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled}
+      className={cn(
+        'rounded-xl border px-4 py-3 text-left transition focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-orange-400 disabled:opacity-60',
+        selected
+          ? 'border-orange-400/60 bg-orange-500/10 text-slate-100'
+          : 'border-slate-700 bg-slate-800/50 text-slate-300 hover:border-slate-500 hover:bg-slate-800',
+      )}
+    >
+      <p className="text-sm font-semibold">{label}</p>
+      <p className="text-xs text-slate-400">{description}</p>
+    </button>
   )
 }
 
@@ -514,6 +586,7 @@ function mixAudioBuffers(
   secondary: AudioBuffer,
   primaryGain: number,
   secondaryGain: number,
+  strategy: MixLengthStrategy,
 ) {
   const sampleRate = primary.sampleRate
 
@@ -522,7 +595,8 @@ function mixAudioBuffers(
   }
 
   const channelCount = Math.max(primary.numberOfChannels, secondary.numberOfChannels)
-  const frameCount = Math.min(primary.length, secondary.length)
+  const frameCount =
+    strategy === 'longest' ? Math.max(primary.length, secondary.length) : Math.min(primary.length, secondary.length)
 
   const mixed = new AudioBuffer({
     length: frameCount,
