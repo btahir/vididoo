@@ -2,7 +2,9 @@
 
 import Script from 'next/script'
 
-const GOOGLE_MEASUREMENT_ID = 'G-5VG6Y3F1W8'  
+const GOOGLE_MEASUREMENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_MEASUREMENT_ID || ''
+
 
 export function Analytics() {
   return (
