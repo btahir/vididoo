@@ -15,33 +15,41 @@ export default function Home() {
             The simplest way to edit your
             <br className="sm:hidden" /> media files.
           </p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3 text-xs sm:text-sm font-semibold text-slate-100">
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
+          <div className="mt-6 grid grid-cols-2 gap-3 text-xs font-semibold text-slate-100 sm:text-sm sm:flex sm:flex-wrap sm:justify-center">
+            <div className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
               100% private
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
+            <div className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
               Lightning fast
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
+            <div className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-400/10 px-4 py-1.5">
               Free to use
             </div>
+            <a
+              href="https://github.com/btahir/vididoo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-sky-300/50 bg-sky-400/15 px-4 py-1.5 text-slate-100 transition hover:border-sky-200/80 hover:text-white"
+            >
+              Open source ↗
+            </a>
           </div>
         </header>
 
         {/* Methods Grid */}
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 text-sm sm:text-base">
             {METHODS.map((method) => {
               const Icon = method.icon;
 
               return (
                 <Link key={method.slug} href={`/method/${method.slug}`}>
                   <Card className="group relative h-full cursor-pointer border-slate-700/50 bg-slate-800/50 backdrop-blur-sm py-0 transition-all duration-200 hover:border-slate-500/50 hover:shadow-lg hover:shadow-slate-900/20 hover:-translate-y-1">
-                    <CardContent className="flex flex-col items-center justify-center p-6 text-center space-y-4">
+                    <CardContent className="flex flex-col items-center justify-center p-5 text-center space-y-3 sm:p-6 sm:space-y-4">
                       <div className="flex h-14 w-14 items-center justify-center text-slate-300 transition-colors duration-200 group-hover:text-slate-100">
                         <Icon className="h-6 w-6" strokeWidth={1.4} />
                       </div>
-                      <h3 className="text-lg font-semibold text-slate-200 transition-colors group-hover:text-slate-50">
+                      <h3 className="text-base font-semibold text-slate-200 transition-colors group-hover:text-slate-50 sm:text-lg">
                         {method.name}
                       </h3>
                     </CardContent>
