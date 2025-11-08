@@ -27,7 +27,8 @@ type BlendCandidate = {
   duration: number | null
 }
 
-const DEFAULT_VOLUME = 0.7
+const DEFAULT_PRIMARY_VOLUME = 1
+const DEFAULT_SECONDARY_VOLUME = 0.2
 
 export function BlendTracksTool() {
   const [primary, setPrimary] = React.useState<BlendCandidate>({
@@ -43,8 +44,8 @@ export function BlendTracksTool() {
     duration: null,
   })
 
-  const [primaryVolume, setPrimaryVolume] = React.useState<number>(DEFAULT_VOLUME)
-  const [secondaryVolume, setSecondaryVolume] = React.useState<number>(DEFAULT_VOLUME)
+  const [primaryVolume, setPrimaryVolume] = React.useState<number>(DEFAULT_PRIMARY_VOLUME)
+  const [secondaryVolume, setSecondaryVolume] = React.useState<number>(DEFAULT_SECONDARY_VOLUME)
 
   const [status, setStatus] = React.useState<Status>('idle')
   const [progress, setProgress] = React.useState<number>(0)
@@ -208,12 +209,12 @@ export function BlendTracksTool() {
   )
 
   const handlePrimaryVolumeChange = React.useCallback((value: number[]) => {
-    const next = clamp(value[0] ?? DEFAULT_VOLUME * 100, 0, 100) / 100
+    const next = clamp(value[0] ?? DEFAULT_PRIMARY_VOLUME * 100, 0, 100) / 100
     setPrimaryVolume(next)
   }, [])
 
   const handleSecondaryVolumeChange = React.useCallback((value: number[]) => {
-    const next = clamp(value[0] ?? DEFAULT_VOLUME * 100, 0, 100) / 100
+    const next = clamp(value[0] ?? DEFAULT_SECONDARY_VOLUME * 100, 0, 100) / 100
     setSecondaryVolume(next)
   }, [])
 
