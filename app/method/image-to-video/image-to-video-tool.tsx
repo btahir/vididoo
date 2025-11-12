@@ -17,16 +17,23 @@ import { useMediabunny } from '@/hooks/use-mediabunny'
 import { createMp4Output } from '@/lib/mediabunny-loader'
 import { SourceFilePicker } from '@/components/media/source-file-picker'
 import { cn } from '@/lib/utils'
+import { canEncodeAudio } from 'mediabunny'
+import { registerMp3Encoder } from '@mediabunny/mp3-encoder'
+import type * as MediabunnyModule from 'mediabunny'
 
 type Mediabunny = typeof import('mediabunny')
 type CanvasSourceConstructor = Mediabunny['CanvasSource']
 type CanvasSourceInstance = InstanceType<CanvasSourceConstructor>
 type CanvasSourceConfig = ConstructorParameters<CanvasSourceConstructor>[1]
+type AudioBufferSource = InstanceType<Mediabunny['AudioBufferSource']>
+type AudioCodec = MediabunnyModule.AudioCodec
 
 type Status = 'idle' | 'ready' | 'converting' | 'success' | 'error'
 
 const FRAME_RATE = 30
 const DEFAULT_DURATION = 5
+const MIN_DURATION = 1
+const MAX_DURATION = 30 * 60 // 30 minutes
 
 const RESOLUTIONS = [
   { id: '1080p', label: '1080p (1920 × 1080)', width: 1920, height: 1080 },
@@ -34,10 +41,19 @@ const RESOLUTIONS = [
   { id: 'square', label: 'Square (1080 × 1080)', width: 1080, height: 1080 },
 ]
 
+const BITRATE_REQUIRED_CODECS = new Set<AudioCodec>(['aac', 'opus', 'mp3', 'vorbis'])
+let mp3EncoderRegistered = false
+
 export function ImageToVideoTool() {
   const [imageFile, setImageFile] = React.useState<File | null>(null)
   const [imageUrl, setImageUrl] = React.useState<string | null>(null)
   const [imageDimensions, setImageDimensions] = React.useState<{ width: number; height: number } | null>(null)
+
+  const [audioFile, setAudioFile] = React.useState<File | null>(null)
+  const [audioPreviewUrl, setAudioPreviewUrl] = React.useState<string | null>(null)
+  const [audioBuffer, setAudioBuffer] = React.useState<AudioBuffer | null>(null)
+  const [audioDuration, setAudioDuration] = React.useState<number | null>(null)
+  const [audioDecoding, setAudioDecoding] = React.useState(false)
 
   const [durationSeconds, setDurationSeconds] = React.useState<number>(DEFAULT_DURATION)
   const [resolutionId, setResolutionId] = React.useState<string>(RESOLUTIONS[0].id)
@@ -47,6 +63,7 @@ export function ImageToVideoTool() {
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [downloadName, setDownloadName] = React.useState<string | null>(null)
 
+  const audioDecodeRequestId = React.useRef(0)
   const { mediabunny, loading, error, reload } = useMediabunny()
 
   React.useEffect(() => {
@@ -56,6 +73,14 @@ export function ImageToVideoTool() {
       }
     }
   }, [imageUrl])
+
+  React.useEffect(() => {
+    return () => {
+      if (audioPreviewUrl) {
+        URL.revokeObjectURL(audioPreviewUrl)
+      }
+    }
+  }, [audioPreviewUrl])
 
   const handleFileSelected = React.useCallback((nextFile: File | null) => {
     setImageFile(nextFile)
@@ -73,6 +98,50 @@ export function ImageToVideoTool() {
     })
   }, [])
 
+  const handleAudioSelected = React.useCallback(async (nextFile: File | null) => {
+    const requestId = ++audioDecodeRequestId.current
+
+    setAudioFile(nextFile)
+    setAudioBuffer(null)
+    setAudioDuration(null)
+    setAudioDecoding(Boolean(nextFile))
+
+    setAudioPreviewUrl((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev)
+      }
+      return nextFile ? URL.createObjectURL(nextFile) : null
+    })
+
+    if (!nextFile) {
+      setAudioDecoding(false)
+      return
+    }
+
+    try {
+      const { buffer, duration } = await decodeAudioBuffer(nextFile)
+      if (audioDecodeRequestId.current !== requestId) return
+      setAudioBuffer(buffer)
+      setAudioDuration(duration)
+    } catch (err) {
+      if (audioDecodeRequestId.current !== requestId) return
+      const message = err instanceof Error ? err.message : 'Unable to decode audio file.'
+      setErrorMessage(message)
+      setStatus('error')
+      setAudioFile(null)
+      setAudioPreviewUrl((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev)
+        }
+        return null
+      })
+    } finally {
+      if (audioDecodeRequestId.current === requestId) {
+        setAudioDecoding(false)
+      }
+    }
+  }, [])
+
   const handleImageLoaded = React.useCallback((event: React.SyntheticEvent<HTMLImageElement>) => {
     const { naturalWidth, naturalHeight } = event.currentTarget
     if (naturalWidth && naturalHeight) {
@@ -80,7 +149,8 @@ export function ImageToVideoTool() {
     }
   }, [])
 
-  const durationValid = Number.isFinite(durationSeconds) && durationSeconds >= 1 && durationSeconds <= 60
+  const durationValid =
+    Number.isFinite(durationSeconds) && durationSeconds >= MIN_DURATION && durationSeconds <= MAX_DURATION
   const selectedResolution = React.useMemo(
     () => RESOLUTIONS.find((item) => item.id === resolutionId) ?? RESOLUTIONS[0],
     [resolutionId],
@@ -107,7 +177,8 @@ export function ImageToVideoTool() {
   }, [status, downloadName, errorMessage, error, reload])
 
   const converting = status === 'converting'
-  const disabled = converting || !imageFile || !durationValid || loading
+  const audioReady = !audioFile || (!!audioBuffer && !audioDecoding)
+  const disabled = converting || !imageFile || !durationValid || loading || !audioReady
 
   const convert = React.useCallback(async () => {
     if (!imageFile) {
@@ -117,7 +188,7 @@ export function ImageToVideoTool() {
     }
 
     if (!durationValid) {
-      setErrorMessage('Enter a duration between 1 and 60 seconds.')
+      setErrorMessage(`Enter a duration between ${MIN_DURATION} second and ${MAX_DURATION / 60} minutes.`)
       setStatus('error')
       return
     }
@@ -159,6 +230,24 @@ export function ImageToVideoTool() {
       frameRate: FRAME_RATE,
     })
 
+    let audioSource: AudioBufferSource | null = null
+
+    if (audioBuffer) {
+      const supportedCodecs = format.getSupportedAudioCodecs()
+      if (!supportedCodecs?.length) {
+        setErrorMessage('Audio encoding is not supported in this browser.')
+        setStatus('error')
+        return
+      }
+      const selectedAudioCodec = await selectAudioCodec(supportedCodecs)
+      const audioConfig =
+        needsBitrate(selectedAudioCodec) ?
+          { codec: selectedAudioCodec, bitrate: 192_000 } :
+          { codec: selectedAudioCodec }
+      audioSource = new runtime.AudioBufferSource(audioConfig)
+      output.addAudioTrack(audioSource)
+    }
+
     setStatus('converting')
     setProgress(0)
     setErrorMessage(null)
@@ -188,6 +277,14 @@ export function ImageToVideoTool() {
       }
 
       canvasSource.close()
+
+      if (audioSource && audioBuffer) {
+        const matchedBuffer = matchAudioDuration(audioBuffer, durationSeconds)
+        await audioSource.add(matchedBuffer)
+        audioSource.close()
+        audioSource = null
+      }
+
       await output.finalize()
 
       const buffer = target.buffer
@@ -206,8 +303,12 @@ export function ImageToVideoTool() {
       setErrorMessage(message)
       setStatus('error')
       setProgress(0)
+    } finally {
+      if (audioSource) {
+        audioSource.close()
+      }
     }
-  }, [imageFile, durationValid, mediabunny, reload, selectedResolution, durationSeconds])
+  }, [imageFile, durationValid, mediabunny, reload, selectedResolution, durationSeconds, audioBuffer])
 
   return (
     <div className="flex flex-col gap-6">
@@ -244,8 +345,8 @@ export function ImageToVideoTool() {
             <Input
               id="video-duration"
               type="number"
-              min={1}
-              max={60}
+              min={MIN_DURATION}
+              max={MAX_DURATION}
               step={1}
               value={durationSeconds}
               disabled={converting}
@@ -253,9 +354,12 @@ export function ImageToVideoTool() {
               onChange={(event) => {
                 const value = Number(event.target.value)
                 if (!Number.isFinite(value)) return
-                setDurationSeconds(clamp(value, 1, 60))
+                setDurationSeconds(clamp(value, MIN_DURATION, MAX_DURATION))
               }}
             />
+            <p className="text-xs text-slate-400">
+              Up to {MAX_DURATION / 60} minutes ({MAX_DURATION} seconds) max.
+            </p>
           </div>
           <div className="space-y-2">
             <Label className="text-slate-300">Resolution</Label>
@@ -282,7 +386,36 @@ export function ImageToVideoTool() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="space-y-4 rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6">
+        <div className="space-y-2">
+          <Label className="text-slate-300">Audio track (optional)</Label>
+          <SourceFilePicker
+            accept="audio/*"
+            file={audioFile}
+            disabled={converting}
+            placeholder="Add a soundtrack"
+            onFileSelected={handleAudioSelected}
+          />
+        </div>
+        {audioDecoding && (
+          <p className="text-xs text-slate-400">Decoding audio…</p>
+        )}
+        {audioPreviewUrl && (
+          <audio
+            controls
+            src={audioPreviewUrl}
+            className="w-full rounded-xl border border-slate-700/60 bg-black"
+          />
+        )}
+        {audioDuration !== null && (
+          <p className="text-xs text-slate-400">Source audio duration: {audioDuration.toFixed(2)}s</p>
+        )}
+        <p className="text-xs text-slate-500">
+          The audio will be trimmed or padded to match the selected video duration.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-4">
         {(status === 'converting' || progress > 0) && (
           <Progress value={progress} className="h-1.5 bg-slate-600" />
         )}
@@ -326,7 +459,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
       URL.revokeObjectURL(url)
       resolve(img)
     }
-    img.onerror = (event) => {
+    img.onerror = () => {
       URL.revokeObjectURL(url)
       reject(new Error('Unable to load image.'))
     }
@@ -381,4 +514,100 @@ function triggerDownload(url: string, filename: string) {
   anchor.click()
   document.body.removeChild(anchor)
   window.setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+async function decodeAudioBuffer(file: File) {
+  const arrayBuffer = await file.arrayBuffer()
+  const audioContext = new AudioContext()
+  try {
+    const buffer = await audioContext.decodeAudioData(arrayBuffer.slice(0))
+    const duration = buffer.duration
+    return { buffer, duration }
+  } finally {
+    audioContext.close().catch(() => undefined)
+  }
+}
+
+function matchAudioDuration(buffer: AudioBuffer, targetDuration: number) {
+  const sampleRate = buffer.sampleRate
+  const targetLength = Math.max(1, Math.round(sampleRate * targetDuration))
+  const matched = new AudioBuffer({
+    length: targetLength,
+    sampleRate,
+    numberOfChannels: buffer.numberOfChannels,
+  })
+
+  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    const sourceData = buffer.getChannelData(channel)
+    const targetData = matched.getChannelData(channel)
+    const sourceFrames = sourceData.length
+
+    for (let i = 0; i < targetLength; i++) {
+      if (i < sourceFrames) {
+        targetData[i] = sourceData[i]
+      } else {
+        targetData[i] = 0
+      }
+    }
+  }
+
+  return matched
+}
+
+async function selectAudioCodec(supported: AudioCodec[]) {
+  const preferredOrder: AudioCodec[] = ['aac', 'mp3']
+
+  for (const codec of preferredOrder) {
+    if (!supported.includes(codec)) continue
+    if (codec === 'aac') {
+      if (await safeCanEncodeAudio(codec)) {
+        return codec
+      }
+    } else if (codec === 'mp3') {
+      if (await ensureMp3Support()) {
+        return codec
+      }
+    }
+  }
+
+  for (const codec of supported) {
+    if (codec === 'mp3') {
+      if (await ensureMp3Support()) {
+        return codec
+      }
+    } else if (await safeCanEncodeAudio(codec)) {
+      return codec
+    }
+  }
+
+  throw new Error('No compatible audio codec is available for this browser.')
+}
+
+async function ensureMp3Support() {
+  if (await safeCanEncodeAudio('mp3')) {
+    return true
+  }
+
+  if (!mp3EncoderRegistered) {
+    try {
+      registerMp3Encoder()
+      mp3EncoderRegistered = true
+    } catch {
+      return false
+    }
+  }
+
+  return safeCanEncodeAudio('mp3')
+}
+
+async function safeCanEncodeAudio(codec: AudioCodec) {
+  try {
+    return await canEncodeAudio(codec)
+  } catch {
+    return false
+  }
+}
+
+function needsBitrate(codec: AudioCodec) {
+  return BITRATE_REQUIRED_CODECS.has(codec)
 }
