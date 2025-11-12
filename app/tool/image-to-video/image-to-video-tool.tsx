@@ -155,6 +155,11 @@ export function ImageToVideoTool() {
     () => RESOLUTIONS.find((item) => item.id === resolutionId) ?? RESOLUTIONS[0],
     [resolutionId],
   )
+  const audioDurationSeconds = React.useMemo(() => {
+    if (audioDuration === null) return null
+    const rounded = Number(audioDuration.toFixed(2))
+    return clamp(rounded, MIN_DURATION, MAX_DURATION)
+  }, [audioDuration])
 
   const statusMessage = React.useMemo(() => {
     if (status === 'converting') {
@@ -179,6 +184,12 @@ export function ImageToVideoTool() {
   const converting = status === 'converting'
   const audioReady = !audioFile || (!!audioBuffer && !audioDecoding)
   const disabled = converting || !imageFile || !durationValid || loading || !audioReady
+  const canMatchAudioDuration = Boolean(audioDurationSeconds) && !audioDecoding && !converting
+
+  const applyAudioDuration = React.useCallback(() => {
+    if (audioDurationSeconds === null) return
+    setDurationSeconds(audioDurationSeconds)
+  }, [audioDurationSeconds])
 
   const convert = React.useCallback(async () => {
     if (!imageFile) {
@@ -342,23 +353,38 @@ export function ImageToVideoTool() {
             <Label htmlFor="video-duration" className="text-slate-300">
               Video duration (seconds)
             </Label>
-            <Input
-              id="video-duration"
-              type="number"
-              min={MIN_DURATION}
-              max={MAX_DURATION}
-              step={1}
-              value={durationSeconds}
-              disabled={converting}
-              className="bg-white text-slate-900 placeholder:text-slate-500 border-slate-300 focus-visible:border-orange-400 focus-visible:ring-orange-400/40"
-              onChange={(event) => {
-                const value = Number(event.target.value)
-                if (!Number.isFinite(value)) return
-                setDurationSeconds(clamp(value, MIN_DURATION, MAX_DURATION))
-              }}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="video-duration"
+                type="number"
+                min={MIN_DURATION}
+                max={MAX_DURATION}
+                step={0.1}
+                value={durationSeconds}
+                disabled={converting}
+                className="flex-1 bg-white text-slate-900 placeholder:text-slate-500 border-slate-300 focus-visible:border-orange-400 focus-visible:ring-orange-400/40"
+                onChange={(event) => {
+                  const value = Number(event.target.value)
+                  if (!Number.isFinite(value)) return
+                  setDurationSeconds(clamp(value, MIN_DURATION, MAX_DURATION))
+                }}
+              />
+              {canMatchAudioDuration && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={applyAudioDuration}
+                  className="whitespace-nowrap border border-slate-400/70 bg-slate-100 text-slate-900 hover:bg-slate-200"
+                >
+                  Use audio length
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-slate-400">
               Up to {MAX_DURATION / 60} minutes ({MAX_DURATION} seconds) max.
+              {canMatchAudioDuration && audioDuration !== null && audioDuration > MAX_DURATION && (
+                <> Audio exceeds max; using {MAX_DURATION}s.</>
+              )}
             </p>
           </div>
           <div className="space-y-2">
