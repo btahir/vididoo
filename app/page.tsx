@@ -43,7 +43,7 @@ export default function Home() {
               const Icon = method.icon;
 
               return (
-                <Link key={method.slug} href={`/method/${method.slug}`}>
+                <Link key={method.slug} href={`/tool/${method.slug}`}>
                   <Card className="group relative h-full cursor-pointer border-slate-700/50 bg-slate-800/50 backdrop-blur-sm py-0 transition-all duration-200 hover:border-slate-500/50 hover:shadow-lg hover:shadow-slate-900/20 hover:-translate-y-1">
                     <CardContent className="flex flex-col items-center justify-center p-5 text-center space-y-3 sm:p-6 sm:space-y-4">
                       <div className="flex h-14 w-14 items-center justify-center text-slate-300 transition-colors duration-200 group-hover:text-slate-100">
